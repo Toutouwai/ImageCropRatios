@@ -26,7 +26,7 @@
 		var ratios = parent_config['icr_ratios_' + image_field_name];
 
 		// Add select element
-		var $el = $('<label>Ratio:&nbsp;</label>');
+		var $el = $('<label>' + parent_config.icr_label + ':&nbsp;</label>');
 		var $select = $('<select id="icr_ratio"></select>');
 		$.each(ratios, function(index, value) {
 			$select.append('<option value="' + index + '">' + value + '</option>');

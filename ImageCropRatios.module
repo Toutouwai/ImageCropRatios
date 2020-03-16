@@ -73,6 +73,7 @@ EOT;
 			$ratios["_$value"] = $label; // Prefix to force treatment as string
 		}
 		$config->js("icr_ratios_{$field->name}", $ratios);
+		$config->js('icr_label', $this->_('Ratio'));
 	}
 
 	/**
