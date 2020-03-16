@@ -1,0 +1,144 @@
+<?php namespace ProcessWire;
+
+class ImageCropRatios extends WireData implements Module, ConfigurableModule {
+
+	/**
+	 * Module information
+	 */
+	public static function getModuleInfo() {
+		return array(
+			'title' => 'Image Crop Ratios',
+			'summary' => 'Allows preset aspect ratios to be defined per image field for the ProcessWire image crop tool.',
+			'version' => '0.1.0',
+			'author' => 'Robin Sallis',
+			'href' => 'https://github.com/Toutouwai/ImageCropRatios',
+			'icon' => 'crop',
+			'autoload' => 'template=admin',
+			'requires' => 'ProcessWire>=3.0.0, PHP>=5.4.0',
+		);
+	}
+
+	/**
+	 * Construct
+	 */
+	public function __construct() {
+		parent::__construct();
+		$this->default_aspect_ratios = <<<EOT
+-
+4:3
+3:2
+1:1
+2:1
+16:9
+1.85:1
+EOT;
+	}
+
+	/**
+	 * Ready
+	 */
+	public function ready() {
+		$this->addHookAfter('InputfieldImage::renderReadyHook', $this, 'afterRenderReady');
+		$this->addHookBefore('ProcessPageEditImageSelect::executeEdit', $this, 'beforeImageEdit');
+		$this->addHookAfter('InputfieldImage::getConfigInputfields', $this, 'addConfig');
+		$this->addHookAfter('InputfieldImage::getConfigAllowContext', $this, 'allowContext');
+	}
+
+	/**
+	 * After InputfieldImage::renderReadyHook
+	 * Add config field to InputfieldImage
+	 *
+	 * @param HookEvent $event
+	 */
+	protected function afterRenderReady(HookEvent $event) {
+		/* @var InputfieldImage $inputfield */
+		$inputfield = $event->object;
+		$field = $inputfield->hasField;
+		$config = $this->wire('config');
+		$ratios = [];
+		$ratios_str = $field->aspect_ratios;
+		if(!$ratios_str) $ratios_str = $this->default_aspect_ratios;
+		$lines = explode("\n", str_replace("\r", "", $ratios_str));
+		foreach($lines as $line) {
+			if($line === '-') {
+				$ratios['auto'] = '';
+				continue;
+			}
+			$pieces = explode('=', $line, 2);
+			$value = $pieces[0];
+			$label = !empty($pieces[1]) ? $pieces[1] : $value;
+			$numbers = explode(':', $value);
+			if(count($numbers) !== 2) continue;
+			$value = floatval($numbers[0]) / floatval($numbers[1]);
+			$ratios["_$value"] = $label; // Prefix to force treatment as string
+		}
+		$config->js("icr_ratios_{$field->name}", $ratios);
+	}
+
+	/**
+	 * Before ProcessPageEditImageSelect::executeEdit
+	 * Add JS and CSS assets
+	 *
+	 * @param HookEvent $event
+	 */
+	protected function beforeImageEdit(HookEvent $event) {
+		// Add JS and CSS
+		$config = $this->wire('config');
+		$info = $this->getModuleInfo();
+		$version = $info['version'];
+		$config->scripts->add($config->urls->{$this} . "{$this}.js?v={$version}");
+		$config->styles->add($config->urls->{$this} . "{$this}.css?v={$version}");
+	}
+
+	/**
+	 * Add config field to InputfieldImage
+	 *
+	 * @param HookEvent $event
+	 */
+	protected function addConfig(HookEvent $event) {
+		/* @var InputfieldImage $inputfield */
+		$inputfield = $event->object;
+		$wrapper = $event->return;
+		$field = $inputfield->hasField;
+		if(!$field) return;
+
+		/* @var InputfieldText $f */
+		$f = $this->wire('modules')->InputfieldTextarea;
+		$f_name = 'aspect_ratios';
+		$f->name = $f_name;
+		$f->label = $this->_('Aspect ratios for image cropper');
+		$f->description = $this->_('Format is "value=label", where the value must be in the format "number:number". The label can be omitted if not needed. Insert a hyphen as the first item unless you want to force a selection.');
+		$f->value = $field->$f_name;
+		$f->collapsed = Inputfield::collapsedBlank;
+		$wrapper->add($f);
+	}
+
+	/**
+	 * Allow setting config field in template context
+	 *
+	 * @param HookEvent $event
+	 */
+	protected function allowContext(HookEvent $event) {
+		$allowed = $event->return;
+		$allowed[] = 'aspect_ratios';
+		$event->return = $allowed;
+	}
+
+	/**
+	 * Config inputfields
+	 *
+	 * @param InputfieldWrapper $inputfields
+	 */
+	public function getModuleConfigInputfields($inputfields) {
+		/* @var InputfieldTextarea $f */
+		$f = $this->wire('modules')->InputfieldTextarea;
+		$f_name = 'default_aspect_ratios';
+		$f->name = $f_name;
+		$f->label = $this->_('Default aspect ratios');
+		$f->description = $this->_('These are used for all image fields unless the "Aspect ratios for image cropper" field is populated in the field settings.');
+		$f->description .= "\n" . $this->_('Format is "value=label", where the value must be in the format "number:number". The label can be omitted if not needed. Insert a hyphen as the first item unless you want to force a selection.');
+		$f->value = $this->$f_name;
+		$inputfields->add($f);
+	}
+
+}
