@@ -6,7 +6,7 @@ The module adds a select dropdown to the crop tool. Choose an aspect ratio and t
 
 ## Screencast
 
-![screencast](https://user-images.githubusercontent.com/1538852/76713927-05943180-6789-11ea-96c5-1386de908a5f.gif)
+![screencast](https://user-images.githubusercontent.com/1538852/76714249-e4344500-678a-11ea-942b-8a97c75000bf.gif)
 
 
 ## Installation

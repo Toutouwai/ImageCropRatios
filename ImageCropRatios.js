@@ -35,7 +35,10 @@
 		$('#crop_coordinates').append($el);
 
 		// Set crop aspect ratio when crop action selected or dropdown changes
-		$('#crop_action').click(setCropAspectRatio);
+		$('#crop_action').click(function() {
+			// Wait a moment for core JS to execute
+			setTimeout(setCropAspectRatio, 100);
+		});
 		$(document).on('change', '#icr_ratio', setCropAspectRatio);
 
 	});
