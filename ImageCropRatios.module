@@ -9,7 +9,7 @@ class ImageCropRatios extends WireData implements Module, ConfigurableModule {
 		return array(
 			'title' => 'Image Crop Ratios',
 			'summary' => 'Allows preset aspect ratios to be defined per image field for the ProcessWire image crop tool.',
-			'version' => '0.1.1',
+			'version' => '0.1.2',
 			'author' => 'Robin Sallis',
 			'href' => 'https://github.com/Toutouwai/ImageCropRatios',
 			'icon' => 'crop',
@@ -70,7 +70,7 @@ EOT;
 			$label = !empty($pieces[1]) ? $pieces[1] : $value;
 			$numbers = explode(':', $value);
 			if(count($numbers) !== 2) continue;
-			$value = floatval($numbers[0]) / floatval($numbers[1]);
+			$value = (string) str_replace(',', '.', round((float) $numbers[0] / (float) $numbers[1], 5));
 			$ratios["_$value"] = $label; // Prefix to force treatment as string
 		}
         $fieldName = ($page instanceof RepeaterPage) ? $field->name . "_repeater{$page->id}" : $field->name;
