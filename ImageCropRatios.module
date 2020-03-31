@@ -9,7 +9,7 @@ class ImageCropRatios extends WireData implements Module, ConfigurableModule {
 		return array(
 			'title' => 'Image Crop Ratios',
 			'summary' => 'Allows preset aspect ratios to be defined per image field for the ProcessWire image crop tool.',
-			'version' => '0.1.0',
+			'version' => '0.1.1',
 			'author' => 'Robin Sallis',
 			'href' => 'https://github.com/Toutouwai/ImageCropRatios',
 			'icon' => 'crop',
@@ -53,6 +53,7 @@ EOT;
 	protected function afterRenderReady(HookEvent $event) {
 		/* @var InputfieldImage $inputfield */
 		$inputfield = $event->object;
+        $page = $inputfield->hasPage;
 		$field = $inputfield->hasField;
 		$config = $this->wire('config');
 		$ratios = [];
@@ -72,7 +73,8 @@ EOT;
 			$value = floatval($numbers[0]) / floatval($numbers[1]);
 			$ratios["_$value"] = $label; // Prefix to force treatment as string
 		}
-		$config->js("icr_ratios_{$field->name}", $ratios);
+        $fieldName = ($page instanceof RepeaterPage) ? $field->name . "_repeater{$page->id}" : $field->name;
+		$config->js("icr_ratios_{$fieldName}", $ratios);
 		$config->js('icr_label', $this->_('Ratio'));
 	}
 
