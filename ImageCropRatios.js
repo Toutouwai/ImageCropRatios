@@ -20,13 +20,12 @@
 
 	$(document).ready(function() {
 
-		// Get aspect ratios from PW config
-		var parent_config = window.parent.ProcessWire.config;
+		// Get aspect ratios from JS var
 		var image_field_name = getUrlParameter('field');
-		var ratios = parent_config['icr_ratios_' + image_field_name];
+		var ratios = window.parent['icr_ratios_' + image_field_name];
 
 		// Add select element
-		var $el = $('<label>' + parent_config.icr_label + ':&nbsp;</label>');
+		var $el = $('<label>' + ProcessWire.config.icr_label + ':&nbsp;</label>');
 		var $select = $('<select id="icr_ratio"></select>');
 		$.each(ratios, function(index, value) {
 			$select.append('<option value="' + index + '">' + value + '</option>');

@@ -9,7 +9,7 @@ class ImageCropRatios extends WireData implements Module, ConfigurableModule {
 		return array(
 			'title' => 'Image Crop Ratios',
 			'summary' => 'Allows preset aspect ratios to be defined per image field for the ProcessWire image crop tool.',
-			'version' => '0.1.0',
+			'version' => '0.1.1',
 			'author' => 'Robin Sallis',
 			'href' => 'https://github.com/Toutouwai/ImageCropRatios',
 			'icon' => 'crop',
@@ -38,7 +38,7 @@ EOT;
 	 * Ready
 	 */
 	public function ready() {
-		$this->addHookAfter('InputfieldImage::renderReadyHook', $this, 'afterRenderReady');
+		$this->addHookAfter('InputfieldImage::render', $this, 'afterRender');
 		$this->addHookBefore('ProcessPageEditImageSelect::executeEdit', $this, 'beforeImageEdit');
 		$this->addHookAfter('InputfieldImage::getConfigInputfields', $this, 'addConfig');
 		$this->addHookAfter('InputfieldImage::getConfigAllowContext', $this, 'allowContext');
@@ -50,11 +50,10 @@ EOT;
 	 *
 	 * @param HookEvent $event
 	 */
-	protected function afterRenderReady(HookEvent $event) {
+	protected function afterRender(HookEvent $event) {
 		/* @var InputfieldImage $inputfield */
 		$inputfield = $event->object;
 		$field = $inputfield->hasField;
-		$config = $this->wire('config');
 		$ratios = [];
 		$ratios_str = $field->aspect_ratios;
 		if(!$ratios_str) $ratios_str = $this->default_aspect_ratios;
@@ -67,13 +66,13 @@ EOT;
 			$pieces = explode('=', $line, 2);
 			$value = $pieces[0];
 			$label = !empty($pieces[1]) ? $pieces[1] : $value;
-			$numbers = explode(':', $value);
+			$numbers = explode(':', str_replace(',', '.', $value));
 			if(count($numbers) !== 2) continue;
-			$value = floatval($numbers[0]) / floatval($numbers[1]);
+			$value = round((float) $numbers[0] / (float) $numbers[1], 5);
 			$ratios["_$value"] = $label; // Prefix to force treatment as string
 		}
-		$config->js("icr_ratios_{$field->name}", $ratios);
-		$config->js('icr_label', $this->_('Ratio'));
+		$ratios_json = json_encode($ratios);
+		$event->return .= "<script>var icr_ratios_{$inputfield->name} = $ratios_json;</script>";
 	}
 
 	/**
@@ -89,6 +88,7 @@ EOT;
 		$version = $info['version'];
 		$config->scripts->add($config->urls->{$this} . "{$this}.js?v={$version}");
 		$config->styles->add($config->urls->{$this} . "{$this}.css?v={$version}");
+		$config->js('icr_label', $this->_('Ratio'));
 	}
 
 	/**
