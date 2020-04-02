@@ -38,45 +38,63 @@ EOT;
 	 * Ready
 	 */
 	public function ready() {
-		$this->addHookAfter('InputfieldImage::renderReadyHook', $this, 'afterRenderReady');
+		$this->addHookAfter('InputfieldImage::render', $this, 'afterRender');
+        $this->addHookAfter('ProcessPageEdit::buildForm', $this, 'afterBuildForm');
 		$this->addHookBefore('ProcessPageEditImageSelect::executeEdit', $this, 'beforeImageEdit');
 		$this->addHookAfter('InputfieldImage::getConfigInputfields', $this, 'addConfig');
 		$this->addHookAfter('InputfieldImage::getConfigAllowContext', $this, 'allowContext');
 	}
 
 	/**
-	 * After InputfieldImage::renderReadyHook
+	 * After InputfieldImage::afterRender
 	 * Add config field to InputfieldImage
 	 *
 	 * @param HookEvent $event
 	 */
-	protected function afterRenderReady(HookEvent $event) {
+	protected function afterRender(HookEvent $event) {
 		/* @var InputfieldImage $inputfield */
 		$inputfield = $event->object;
-        $page = $inputfield->hasPage;
 		$field = $inputfield->hasField;
-		$config = $this->wire('config');
-		$ratios = [];
 		$ratios_str = $field->aspect_ratios;
 		if(!$ratios_str) $ratios_str = $this->default_aspect_ratios;
-		$lines = explode("\n", str_replace("\r", "", $ratios_str));
-		foreach($lines as $line) {
-			if($line === '-') {
-				$ratios['auto'] = '';
-				continue;
-			}
-			$pieces = explode('=', $line, 2);
-			$value = $pieces[0];
-			$label = !empty($pieces[1]) ? $pieces[1] : $value;
-			$numbers = explode(':', $value);
-			if(count($numbers) !== 2) continue;
-			$value = (string) str_replace(',', '.', round((float) $numbers[0] / (float) $numbers[1], 5));
-			$ratios["_$value"] = $label; // Prefix to force treatment as string
-		}
-        $fieldName = ($page instanceof RepeaterPage) ? $field->name . "_repeater{$page->id}" : $field->name;
-		$config->js("icr_ratios_{$fieldName}", $ratios);
-		$config->js('icr_label', $this->_('Ratio'));
+		$ratios_json = json_encode($this->getRatios($ratios_str));
+        $event->return .= "<script>var icr_ratios_{$inputfield->name} = $ratios_json;</script>";
 	}
+
+    /**
+     * After ProcessPageEdit::buildForm
+     * Add default configuration.
+     * Needed for inline image edit in CKE
+     *
+     * @param HookEvent $event
+     */
+    protected function afterBuildForm(HookEvent $event) {
+        $this->config->js("icr_ratios_default", $this->getRatios($this->default_aspect_ratios));
+    }
+
+    /**
+     * Get configurations as array
+     *
+     * @param String $ratios_str
+     */
+    protected function getRatios($ratios_str) {
+        $ratios = array();
+        $lines = explode("\n", str_replace("\r", "", $ratios_str));
+        foreach($lines as $line) {
+            if($line === '-') {
+                $ratios['auto'] = '';
+                continue;
+            }
+            $pieces = explode('=', $line, 2);
+            $value = $pieces[0];
+            $label = !empty($pieces[1]) ? $pieces[1] : $value;
+            $numbers = explode(':', $value);
+            if(count($numbers) !== 2) continue;
+            $value = (string) number_format((float) $numbers[0] / (float) $numbers[1], 5, '.', '');
+            $ratios["_$value"] = $label; // Prefix to force treatment as string
+        }
+        return $ratios;
+    }
 
 	/**
 	 * Before ProcessPageEditImageSelect::executeEdit
@@ -91,6 +109,7 @@ EOT;
 		$version = $info['version'];
 		$config->scripts->add($config->urls->{$this} . "{$this}.js?v={$version}");
 		$config->styles->add($config->urls->{$this} . "{$this}.css?v={$version}");
+        $config->js('icr_label', $this->_('Ratio'));
 	}
 
 	/**

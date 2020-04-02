@@ -5,7 +5,7 @@
 		name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
 		var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
 		var results = regex.exec(location.search);
-		return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+		return results === null ? false : decodeURIComponent(results[1].replace(/\+/g, ' '));
 	}
 
 	// Set crop aspect ratio
@@ -20,13 +20,11 @@
 
 	$(document).ready(function() {
 
-		// Get aspect ratios from PW config
-		var parent_config = window.parent.ProcessWire.config;
 		var image_field_name = getUrlParameter('field');
-		var ratios = parent_config['icr_ratios_' + image_field_name];
+		var ratios = (image_field_name === false) ? window.parent.ProcessWire.config.icr_ratios_default : window.parent['icr_ratios_' + image_field_name];
 
 		// Add select element
-		var $el = $('<label>' + parent_config.icr_label + ':&nbsp;</label>');
+		var $el = $('<label>' + ProcessWire.config.icr_label + ':&nbsp;</label>');
 		var $select = $('<select id="icr_ratio"></select>');
 		$.each(ratios, function(index, value) {
 			$select.append('<option value="' + index + '">' + value + '</option>');
