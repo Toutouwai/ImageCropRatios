@@ -9,7 +9,7 @@ class ImageCropRatios extends WireData implements Module, ConfigurableModule {
 		return array(
 			'title' => 'Image Crop Ratios',
 			'summary' => 'Allows preset aspect ratios to be defined per image field for the ProcessWire image crop tool.',
-			'version' => '0.1.1',
+			'version' => '0.1.2',
 			'author' => 'Robin Sallis',
 			'href' => 'https://github.com/Toutouwai/ImageCropRatios',
 			'icon' => 'crop',
@@ -38,26 +38,30 @@ EOT;
 	 * Ready
 	 */
 	public function ready() {
-		$this->addHookAfter('InputfieldImage::render', $this, 'afterRender');
-		$this->addHookBefore('ProcessPageEditImageSelect::executeEdit', $this, 'beforeImageEdit');
+		$this->addHookAfter('ProcessPageEditImageSelect::executeEdit', $this, 'afterImageEdit');
 		$this->addHookAfter('InputfieldImage::getConfigInputfields', $this, 'addConfig');
 		$this->addHookAfter('InputfieldImage::getConfigAllowContext', $this, 'allowContext');
 	}
 
 	/**
-	 * After InputfieldImage::renderReadyHook
-	 * Add config field to InputfieldImage
+	 * After ProcessPageEditImageSelect::executeEdit
 	 *
 	 * @param HookEvent $event
 	 */
-	protected function afterRender(HookEvent $event) {
-		/* @var InputfieldImage $inputfield */
-		$inputfield = $event->object;
-		$field = $inputfield->hasField;
+	protected function afterImageEdit(HookEvent $event) {
+		/* @var ProcessPageEditImageSelect $ppeis */
+		$ppeis = $event->object;
+		$pagefile = $ppeis->getPageimage();
+		$field = $pagefile->field;
+		$page = $pagefile->page;
+		$field_context = $page->template->fieldgroup->getFieldContext($field);
+
+		// Ratios for edited image to JS
+		$config = $this->wire('config');
 		$ratios = [];
-		$ratios_str = $field->aspect_ratios;
+		$ratios_str = $field_context->aspect_ratios;
 		if(!$ratios_str) $ratios_str = $this->default_aspect_ratios;
-		$lines = explode("\n", str_replace("\r", "", $ratios_str));
+		$lines = explode("\n", $ratios_str);
 		foreach($lines as $line) {
 			if($line === '-') {
 				$ratios['auto'] = '';
@@ -66,29 +70,19 @@ EOT;
 			$pieces = explode('=', $line, 2);
 			$value = $pieces[0];
 			$label = !empty($pieces[1]) ? $pieces[1] : $value;
-			$numbers = explode(':', str_replace(',', '.', $value));
+			$numbers = explode(':', $value);
 			if(count($numbers) !== 2) continue;
-			$value = round((float) $numbers[0] / (float) $numbers[1], 5);
+			$value = (string) number_format((float) $numbers[0] / (float) $numbers[1], 5, '.', '');
 			$ratios["_$value"] = $label; // Prefix to force treatment as string
 		}
-		$ratios_json = json_encode($ratios);
-		$event->return .= "<script>var icr_ratios_{$inputfield->name} = $ratios_json;</script>";
-	}
-
-	/**
-	 * Before ProcessPageEditImageSelect::executeEdit
-	 * Add JS and CSS assets
-	 *
-	 * @param HookEvent $event
-	 */
-	protected function beforeImageEdit(HookEvent $event) {
+		$config->js("icr_ratios", $ratios);
+		$config->js('icr_label', $this->_('Ratio'));
+		
 		// Add JS and CSS
-		$config = $this->wire('config');
 		$info = $this->getModuleInfo();
 		$version = $info['version'];
 		$config->scripts->add($config->urls->{$this} . "{$this}.js?v={$version}");
 		$config->styles->add($config->urls->{$this} . "{$this}.css?v={$version}");
-		$config->js('icr_label', $this->_('Ratio'));
 	}
 
 	/**

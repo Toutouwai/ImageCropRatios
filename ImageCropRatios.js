@@ -1,13 +1,5 @@
 (function($) {
 
-	// Get parameter from URL
-	function getUrlParameter(name) {
-		name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
-		var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
-		var results = regex.exec(location.search);
-		return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
-	}
-
 	// Set crop aspect ratio
 	function setCropAspectRatio() {
 		var value = $('#icr_ratio').val();
@@ -21,15 +13,16 @@
 	$(document).ready(function() {
 
 		// Get aspect ratios from JS var
-		var image_field_name = getUrlParameter('field');
-		var ratios = window.parent['icr_ratios_' + image_field_name];
+		var ratios = ProcessWire.config.icr_ratios;
 
 		// Add select element
 		var $el = $('<label>' + ProcessWire.config.icr_label + ':&nbsp;</label>');
 		var $select = $('<select id="icr_ratio"></select>');
-		$.each(ratios, function(index, value) {
-			$select.append('<option value="' + index + '">' + value + '</option>');
-		});
+		if(ratios) {
+			$.each(ratios, function(index, value) {
+				$select.append('<option value="' + index + '">' + value + '</option>');
+			});
+		}
 		$el.append($select);
 		$('#crop_coordinates').append($el);
 
